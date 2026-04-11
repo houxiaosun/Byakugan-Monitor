@@ -5,18 +5,20 @@ from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import QApplication, QMainWindow, QLabel, QPushButton, QTableWidget, QTableWidgetItem, QTabWidget,QTextEdit
 import psutil
 import GPUtil
-#CPU温度未解决，pycharm环境配置可能有问题，控制器异常
+from HardwareMonitor.Util import OpenComputer
+from HardwareMonitor.Hardware import HardwareType, SensorType
 
 # 创建定时器
 timer = QTimer()
 analysis_timer = QTimer()  # 新增的分析定时器
 app = QApplication(sys.argv)#创建一个应用程序对象
-
-
-is_monitoring = False  # 添加全局变量来跟踪监控状态
+# 添加全局变量来跟踪监控状态
+is_monitoring = False
+self_test_active = False          # 自检是否正在进行
+self_test_timer = QTimer()        # 用于60秒后结束自检
 # 创建一个主窗口
 window = QMainWindow()
-window.setWindowTitle("Byakugan Monitor v0.5") # 主窗口名
+window.setWindowTitle("Byakugan Monitor v0.6") # 主窗口名
 window.resize(800, 600) # 窗口大小
 
 # 重写关闭事件
@@ -94,9 +96,10 @@ def load_history_data():
         print("还没有历史数据呢！")
 # 当标签切换时触发
 def on_tab_changed(index):
-    if index == 1:  # 第二个标签（历史数据）
+    if index == 1:  # 历史数据标签页
         load_history_data()
-
+    elif index == 2:  # 诊断历史标签页
+        load_diagnosis_history()
 tab_widget.currentChanged.connect(on_tab_changed)
 
 #创建CPU使用率标签
@@ -141,7 +144,8 @@ data_cache = {
     'cpu_temp': [],
     'gpu_usage': [],
     'gpu_temp': [],
-    'memory_usage': []
+    'memory_usage': [],
+    "disk_usage": [],
 }
 MAX_CACHE_SIZE = 120  # 缓存2分钟的数据（500ms×120=60秒）
 
@@ -149,6 +153,8 @@ MAX_CACHE_SIZE = 120  # 缓存2分钟的数据（500ms×120=60秒）
 button = QPushButton("开始监控", parent = window)
 button.move(700, 570)
 
+self_test_button = QPushButton("开始一分钟自检", parent = window)
+self_test_button.move(600, 570)
 
 # 定义更新CPU的函数
 def update_cpu():
@@ -159,7 +165,34 @@ def update_cpu():
     cpu_usage = psutil.cpu_percent(interval=None)  # 获取CPU使用率
     label.setText(f"CPU使用率: {cpu_usage}%")   # 更新显示
     return cpu_usage  # 返回CPU使用率
+#cpu温度
+def get_cpu_temperature():
+    computer = None
+    try:
+        computer = OpenComputer(cpu=True)
+        computer.Update()
 
+        for hardware in computer.Hardware:
+            if hardware.HardwareType == HardwareType.Cpu:
+                for sensor in hardware.Sensors:
+                    if sensor.SensorType == SensorType.Temperature:
+                        val = sensor.Value
+
+                        # 确保值是数字类型，并且有效
+                        if isinstance(val, (int, float)) and val > 0:
+                            return round(val, 1)
+
+                        else:
+                            print(f"警告：温度传感器返回了无效值：{val} (类型：{type(val)})")
+                            return None
+                break
+        return None
+    except Exception as e:
+        print(f"获取CPU温度失败：{e}")
+        return None
+    finally:
+        if computer:
+            computer.Close()
 
 # 定义GPU函数
 def get_gpu_info():
@@ -233,7 +266,7 @@ def update_all():
         cpu_temp_label.setText(f"CPU温度: {cpu_temp}℃")
     else:
         cpu_temp_label.setText("CPU温度: 未监测")
-    log_data(cpu_usage, cpu_temp, gpu_usage, gpu_temp, disk_usage)  # 传递所有数据#修改记得添加！！！！！！！！！！！！！#修改记得添加！！！！！！！！！！！！！#修改记得添加！！！！！！！！！！！！！
+    log_data(cpu_usage, cpu_temp,mem_usage, gpu_usage, gpu_temp, disk_usage)  # 传递所有数据#修改记得添加！！！！！！！！！！！！！#修改记得添加！！！！！！！！！！！！！#修改记得添加！！！！！！！！！！！！！
 
 # 将数据添加到缓存#修改记得添加！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！
     timestamp = datetime.datetime.now()
@@ -243,6 +276,7 @@ def update_all():
     data_cache['gpu_usage'].append(gpu_usage if gpu_usage else 0)
     data_cache['gpu_temp'].append(gpu_temp if gpu_temp else 0)
     data_cache['memory_usage'].append(mem_usage)
+    data_cache['disk_usage'].append(disk_usage)
 
  # 保持缓存大小
     for key in data_cache:
@@ -261,7 +295,11 @@ def perform_analysis():
 
     # 计算平均值
     cpu_avg = sum(data_cache['cpu_usage']) / len(data_cache['cpu_usage'])
-    cpu_temp_avg = sum(data_cache['cpu_temp']) / len(data_cache['cpu_temp']) if any(data_cache['cpu_temp']) else None
+    if data_cache['cpu_temp'] and any(t > 0 for t in data_cache['cpu_temp']):
+        cpu_temp_avg = sum(t for t in data_cache['cpu_temp'] if t > 0) / len(
+            [t for t in data_cache['cpu_temp'] if t > 0])
+    else:
+        cpu_temp_avg = None
     gpu_avg = sum(data_cache['gpu_usage']) / len(data_cache['gpu_usage'])
     gpu_temp_avg = sum(data_cache['gpu_temp']) / len(data_cache['gpu_temp'])
 
@@ -271,25 +309,25 @@ def perform_analysis():
     # 1. 温度分析（优先）
     if cpu_temp_avg and cpu_temp_avg > 85:
         analysis = "🔥 CPU温度过高！"
-        suggestion = "立即检查散热器、清灰或更换硅脂，长期高温会缩短硬件寿命"
-    elif cpu_temp_avg and cpu_temp_avg > 75:
+        suggestion = "请检查散热器、清灰或更换硅脂，长期高温会缩短硬件寿命"
+    elif cpu_temp_avg and cpu_temp_avg > 78:
         analysis = "🌡️ CPU温度偏高"
         suggestion = "建议改善机箱风道或检查散热器安装"
     elif gpu_temp_avg > 85:
         analysis = "🔥 GPU温度过高！"
         suggestion = "显卡可能需要清灰或改善机箱通风"
-    elif gpu_temp_avg > 75:
+    elif gpu_temp_avg > 76:
         analysis = "🌡️ GPU温度偏高"
         suggestion = "考虑调整风扇曲线或改善机箱风道"
 
     # 2. 性能瓶颈分析（在温度正常的前提下）
     if not analysis:  # 如果没有温度问题，再分析性能
         if cpu_avg > 80 and gpu_avg < 70:
-            analysis = "💻 CPU瓶颈"
+            analysis = "💻 "
             suggestion = "CPU经常高负载而GPU有余力，考虑升级CPU或优化软件设置"
         elif gpu_avg > 85 and cpu_avg < 70:
-            analysis = "🎮 GPU瓶颈"
-            suggestion = "显卡是系统瓶颈，考虑升级显卡或降低图形设置"
+            analysis = "🎮 "
+            suggestion = "显卡高负载，考虑升级显卡或降低图形设置"
         elif cpu_avg > 80 and gpu_avg > 80:
             analysis = "⚖️ 均衡负载"
             suggestion = "CPU和GPU协同工作，系统配置均衡"
@@ -321,7 +359,9 @@ def save_diagnosis_result(analysis, suggestion):
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     with open('diagnosis_log.txt', 'a', encoding='utf-8') as f:
         f.write(f"[{timestamp}] {analysis} | 建议: {suggestion}\n")
-
+# 如果当前就在诊断标签页，实时刷新
+    if tab_widget.currentIndex() == 2:
+        load_diagnosis_history()
 
 def log_data(cpu_usage, cpu_temp,mem_usage,gpu_usage=None, gpu_temp=None, disk_usage=None, is_separator=False):
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -357,6 +397,7 @@ def on_button_clicked():
         update_all()  # 立即更新一次数据
         is_monitoring = True  # 设置监控状态为True
         analysis_timer.start(60000)  # 启动分析定时器
+        self_test_button.setEnabled(False)  # 新增：禁用自检按钮
         is_monitoring = True
     else:
         button.setText("开始监控")
@@ -366,9 +407,62 @@ def on_button_clicked():
         log_data(None, None, None, None, None, is_separator=True)
         is_monitoring = False  # 设置监控状态为False
         analysis_timer.stop()  # 停止分析定时器
+        self_test_button.setEnabled(True)  # 新增：恢复自检按钮
         is_monitoring = False
-
 button.clicked.connect(on_button_clicked)#连接信号和状态栏
+
+# 自检
+def start_self_test():
+    global is_monitoring, self_test_active
+
+    # 如果常规监控正在运行，先停止它
+    if is_monitoring:
+        on_button_clicked()   # 模拟点击“停止监控”，会自动插入分隔行
+
+    # 清空数据缓存，确保分析的是自检期间的60秒数据
+    for key in data_cache:
+        data_cache[key].clear()
+
+    # 设置状态
+    self_test_active = True
+    self_test_button.setEnabled(False)   # 自检期间禁用按钮
+    button.setEnabled(False)             # 也禁用“开始监控”按钮，防止干扰
+    status_bar.showMessage("🔍 一分钟自检已启动，正在收集数据...")
+
+    # 启动数据采集（每500ms）
+    timer.start(500)
+    update_all()  # 立刻采一次
+
+    # 启动60秒后自动结束的定时器
+    self_test_timer.setSingleShot(True)  # 只触发一次
+    self_test_timer.timeout.connect(finish_self_test)
+    self_test_timer.start(60000)         # 60秒 = 60000毫秒
+
+
+def finish_self_test():
+    global self_test_active
+
+    # 停止数据采集
+    timer.stop()
+    self_test_active = False
+
+    # 恢复按钮状态
+    self_test_button.setEnabled(True)
+    button.setEnabled(True)
+
+    # 执行分析（此时缓存中已有约120个数据点）
+    if len(data_cache['timestamps']) >= 60:
+        perform_analysis()
+        status_bar.showMessage("✅ 一分钟自检完成，查看上方诊断结果", 10000)
+    else:
+        status_bar.showMessage("⚠️ 自检数据不足，请稍后重试", 5000)
+
+    # 在CSV中插入分隔行，标记自检结束
+    log_data(None, None, None, None, None, is_separator=True)
+    if tab_widget.currentIndex() == 2:#更新标签页
+        load_diagnosis_history()
+
+self_test_button.clicked.connect(start_self_test)#连接按钮
 
 # 显示并运行
 window.show()
