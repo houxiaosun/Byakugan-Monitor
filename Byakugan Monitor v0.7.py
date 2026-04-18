@@ -15,39 +15,40 @@ from HardwareMonitor.Hardware import HardwareType, SensorType
 class FPSOverlay(QWidget):
     def __init__(self):
         super().__init__()
+        # 设置窗口标志：
+        # - FramelessWindowHint：去掉标题栏和边框，让它看起来像悬浮文字
+        # - WindowStaysOnTopHint：始终保持在所有窗口最前面（包括游戏）
+        # - Tool：让它在任务栏不显示图标，避免干扰
         self.setWindowFlags(
             Qt.FramelessWindowHint |
             Qt.WindowStaysOnTopHint |
             Qt.Tool
         )
+        # 设置背景透明
         self.setAttribute(Qt.WA_TranslucentBackground)
-
+        # 创建显示 FPS 的标签
         self.fps_label = QLabel("FPS: --")
         self.fps_label.setStyleSheet("""
             QLabel {
                 color: white;
-                background-color: rgba(0, 0, 0, 0.8);
-                padding: 10px 15px;
-                border-radius: 8px;
-                font-size: 22px;
+                background-color: rgba(0, 0, 0, 0.6);
+                padding: 8px 12px;
+                border-radius: 6px;
+                font-size: 18px;
                 font-weight: bold;
             }
         """)
-
+        # 将标签放入布局
         layout = QVBoxLayout()
         layout.addWidget(self.fps_label)
         self.setLayout(layout)
 
+        # 移动到屏幕右上角
         screen = QApplication.primaryScreen().geometry()
-        # 放到左上角明显位置，便于确认是否存在
-        self.move(50, 50)
-        print(f"[Overlay] 初始化完成，位置: (50, 50)，屏幕尺寸: {screen.width()}x{screen.height()}")
+        self.move(screen.width() - 150, 10)
 
     def update_fps(self, fps_value):
-        print(f"[Overlay] update_fps 被调用，数值: {fps_value:.1f}")
         self.fps_label.setText(f"FPS: {fps_value:.1f}")
-        # 强制重绘
-        self.repaint()
 
 # 创建定时器
 timer = QTimer()
@@ -59,50 +60,40 @@ self_test_active = False          # 自检是否正在进行
 self_test_timer = QTimer()        # 用于60秒后结束自检
 # 创建一个主窗口
 window = QMainWindow()
-window.setWindowTitle("Byakugan Monitor v0.6") # 主窗口名
+window.setWindowTitle("Byakugan Monitor v0.7") # 主窗口名
 window.resize(800, 600) # 窗口大小
 
 
-from PySide6.QtCore import QObject, Signal
-
 class RealtimeFPSMonitor(QObject):
-    fps_updated = Signal(float)
-
+    """负责定时调用 PresentMon 获取 FPS，并更新浮层"""
+    fps_updated = Signal(float)  # 定义信号
     def __init__(self, overlay):
-        super().__init__()
+        super().__init__()            # 必须先调用父类初始化
         self.overlay = overlay
         self.process_name = "ForzaHorizon5"
         self.running = False
         self.timer = QTimer()
         self.timer.timeout.connect(self._sample_fps)
-        # 连接信号，并打印调试信息
-        self.fps_updated.connect(self._on_fps_updated)
-        print("[FPSMonitor] 初始化完成，信号已连接")
-
-    def _on_fps_updated(self, fps):
-        print(f"[FPSMonitor] 信号 fps_updated 收到数值: {fps:.1f}")
-        self.overlay.update_fps(fps)
-
+        # 连接信号到浮层的更新函数
+        self.fps_updated.connect(self.overlay.update_fps)
     def start(self):
+        """开始监控：显示浮层，启动定时器"""
         if self.running:
             return
         self.running = True
-        print("[FPSMonitor] start() 被调用")
-        self.overlay.show()
-        print(f"[FPSMonitor] overlay.show() 已执行，overlay.isVisible() = {self.overlay.isVisible()}")
-        self.timer.start(2000)
-        print("[FPSMonitor] 定时器已启动，每2秒采样一次")
+        self.overlay.show()#显示浮层
+        self.timer.start(2000)  # 每2秒采样一次
 
     def stop(self):
+        """停止监控：隐藏浮层，停止定时器"""
         self.running = False
         self.timer.stop()
         self.overlay.hide()
-        print("[FPSMonitor] stop() 已执行，浮层已隐藏")
 
     def _sample_fps(self):
-        print("[FPSMonitor] 开始一次 FPS 采样...")
+        # 在后台线程中调用 PresentMon，避免界面卡顿
         def worker():
-            duration = 1.5
+            duration = 1.5  # 采样1.5秒
             temp_csv = "temp_fps_realtime.csv"
             cmd = [
                 "PresentMon-2.4.1-x64.exe",
@@ -114,15 +105,11 @@ class RealtimeFPSMonitor(QObject):
                 "--stop_existing_session"
             ]
             try:
-                result = subprocess.run(cmd, capture_output=True, text=True, timeout=duration + 3)
-                print(f"[Worker] PresentMon 返回码: {result.returncode}")
-                if result.returncode != 0:
-                    print(f"[Worker] PresentMon 错误输出:\n{result.stderr}")
-                    print(f"[Worker] PresentMon 标准输出:\n{result.stdout}")
+                # 调用外部程序，等待它执行完成（最长等待 duration + 3 秒）
+                subprocess.run(cmd, capture_output=True, timeout=duration + 3)
                 if not os.path.exists(temp_csv):
-                    print(f"[Worker] 临时 CSV 未生成，请检查游戏是否运行、进程名是否正确、是否以管理员权限执行")
                     return
-                # ... 后续解析 CSV 的代码保持不变 ...
+                # 解析 CSV 文件，提取列（帧间隔时间，单位毫秒）
                 frame_times = []
                 with open(temp_csv, 'r', encoding='utf-8-sig') as f:
                     reader = csv.DictReader(f)
@@ -133,18 +120,20 @@ class RealtimeFPSMonitor(QObject):
                                 frame_times.append(float(ms))
                             except ValueError:
                                 pass
+                # 如果成功读取到帧时间数据
                 if frame_times:
                     avg_ms = sum(frame_times) / len(frame_times)
                     fps = 1000.0 / avg_ms if avg_ms > 0 else 0
-                    print(f"[Worker] 计算得到 FPS = {fps:.1f}，即将发射信号")
-                    self.fps_updated.emit(fps)
+                    if frame_times:
+                        avg_ms = sum(frame_times) / len(frame_times)
+                        fps = 1000.0 / avg_ms if avg_ms > 0 else 0
+                        # 发射信号，主线程会自动调用 overlay.update_fps
+                        self.fps_updated.emit(fps)
+                        self._log_fps(fps)
+                    # 记录到日志
                     self._log_fps(fps)
-                else:
-                    print("[Worker] 未提取到有效帧时间数据")
             except Exception as e:
-                import traceback
-                print("[Worker] 异常:")
-                traceback.print_exc()
+                print(f"FPS 采样失败: {e}")
             finally:
                 if os.path.exists(temp_csv):
                     os.remove(temp_csv)
@@ -153,9 +142,10 @@ class RealtimeFPSMonitor(QObject):
 
     def _log_fps(self, fps):
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        with open('fps_log.csv', 'a', newline='', encoding='utf-8') as f:
+        with open('fps_log.csv', 'a', newline='') as f:
             writer = csv.writer(f)
             writer.writerow([timestamp, f"{fps:.1f}"])
+
 # 重写关闭事件
 def closeEvent(event):
     if is_monitoring:  # 如果监控正在进行中
