@@ -25,6 +25,10 @@ See all states of your computer, just like the Hyuga clan's legendary eye techni
 
 ## 🚀 当前进度
 
+### v0.8 - 2026-04-27
+- **新增**: 智能判断进程并识别进程名
+- **升级**: 浮窗显示
+
 ### v0.7 - 2026-04-18
 - **新增**: 游戏帧率实时监测
 - **新增**: 顶层悬浮显示
