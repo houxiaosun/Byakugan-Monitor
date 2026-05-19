@@ -4,3 +4,5 @@ apikey.txt/
 hardware_log.csv/
 diagnosis_log.txt/
 fps_log.csv/
+test api.py/
+test cpu.py
