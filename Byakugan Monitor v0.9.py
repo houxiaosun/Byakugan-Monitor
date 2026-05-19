@@ -2,6 +2,7 @@ import sys
 import csv
 import os
 import time
+import requests
 import subprocess
 import threading
 import datetime
@@ -505,11 +506,25 @@ def perform_analysis():
         cpu_temp_avg = None
     gpu_avg = sum(data_cache['gpu_usage']) / len(data_cache['gpu_usage'])
     gpu_temp_avg = sum(data_cache['gpu_temp']) / len(data_cache['gpu_temp'])
+    mem_avg = sum(data_cache['memory_usage']) / len(data_cache['memory_usage'])
+    disk_avg = sum(data_cache['disk_usage']) / len(data_cache['disk_usage'])
 
-    fps = get_last_fps()  # 需要你实现这个函数
+    fps = get_last_fps()
+
+    # ---- 新增：先尝试 AI 分析 ----
+    ai_result = ai_analyze(cpu_avg, cpu_temp_avg, gpu_avg, gpu_temp_avg, mem_avg, disk_avg)
 
     analysis = ""
     suggestion = ""
+    #初始化值
+    #尝试ai分析
+    if ai_result:
+        analysis = "AI 分析"
+        suggestion = ai_result
+        final_message = f"🤖 {ai_result}"
+        status_bar.showMessage(f"💬 {final_message}", 10000)
+        save_diagnosis_result(analysis, suggestion, ai_result)
+        return  # ✅ AI 成功时直接结束，不再执行后面的硬规则
 
     # 1. 温度分析（优先）
     if cpu_temp_avg and cpu_temp_avg > 85:
@@ -551,22 +566,100 @@ def perform_analysis():
         analysis += " | 检测到计算密集型任务"
         suggestion += " | 进行渲染/计算时建议监控温度"
 
+    final_message = f"{analysis} | {suggestion}"
+
     # 显示分析结果
-    status_bar.showMessage(f"分析: {analysis} | 建议: {suggestion}", 10000)
+    status_bar.showMessage(f"💬 {final_message}", 10000)
     # 或者添加到历史诊断记录中
-    save_diagnosis_result(analysis, suggestion)
+    save_diagnosis_result(analysis, suggestion, ai_result if ai_result else None)
 
 analysis_timer.timeout.connect(perform_analysis)
 analysis_timer.start(60000)  # 每分钟触发一次（60000毫秒）
 
-def save_diagnosis_result(analysis, suggestion):
-    """将诊断结果保存到文件"""
+def save_diagnosis_result(analysis, suggestion, ai_version=None):
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     with open('diagnosis_log.txt', 'a', encoding='utf-8') as f:
-        f.write(f"[{timestamp}] {analysis} | 建议: {suggestion}\n")
-# 如果当前就在诊断标签页，实时刷新
+        if ai_version:
+            # AI 成功时，只写一条简洁的 AI 分析记录
+            f.write(f"[{timestamp}] AI 分析: {ai_version}\n")
+        else:
+            # AI 失败时，写本地诊断记录
+            f.write(f"[{timestamp}] 本地分析: {analysis} | {suggestion}\n")
+        # 如果当前就在诊断标签页，实时刷新
     if tab_widget.currentIndex() == 2:
         load_diagnosis_history()
+
+
+def ai_analyze(cpu_avg, cpu_temp_avg, gpu_avg, gpu_temp_avg, mem_avg, disk_avg):
+    """
+    直接把硬件平均值投给 AI，让它自己分析
+    成功返回 AI 的分析结果（字符串），失败返回 None。
+    """
+    # 读取密钥
+    try:
+        with open('apikey.txt', 'r', encoding='utf-8') as f:
+            api_key = f.read().strip()
+    except FileNotFoundError:
+        print("[AI] 未找到 apikey.txt，跳过 AI 分析")
+        return None
+
+    if not api_key:
+        return None
+
+
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json"
+    }
+
+    # 组装给 AI 的数据描述
+    # 处理可能为 None 的值
+    def safe_temp(val):
+        if val is None:
+            return "未知（传感器未读取到数据）"
+        return f"{val:.0f}°C"
+
+    def safe_percent(val):
+        if val is None:
+            return "未知"
+        return f"{val:.0f}%"
+
+    data_text = (
+        f"CPU平均使用率：{safe_percent(cpu_avg)}，"
+        f"CPU平均温度：{safe_temp(cpu_temp_avg)}，"
+        f"GPU平均使用率：{safe_percent(gpu_avg)}，"
+        f"GPU平均温度：{safe_temp(gpu_temp_avg)}，"
+        f"内存平均占用：{safe_percent(mem_avg)}，"
+        f"磁盘平均使用率：{safe_percent(disk_avg)}。"
+    )
+
+    # 核心 prompt：让 AI 自己判断，不依赖本地规则
+    prompt = (
+        "你现在是一个资源监视器的分析助手，不过目前正在测试阶段，如果你能看见数据请把数据依次输出，并分析一下，谢谢\n"
+        f"数据：{data_text}"
+    )
+
+    payload = {
+        "model": "Qwen/Qwen2.5-7B-Instruct",
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": 0.7,
+        "max_tokens": 100
+    }
+
+    try:
+        response = requests.post(
+            "https://api.siliconflow.cn/v1/chat/completions",
+            headers=headers,
+            json=payload,
+            timeout=15
+        )
+        response.raise_for_status()
+        result = response.json()
+        ai_reply = result["choices"][0]["message"]["content"].strip()
+        return ai_reply
+    except Exception as e:
+        print(f"[AI] 调用失败，回退到本地规则: {e}")
+        return None
 
 def log_data(cpu_usage, cpu_temp,mem_usage,gpu_usage=None, gpu_temp=None, disk_usage=None, is_separator=False):
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -613,7 +706,7 @@ def on_button_clicked():
         is_monitoring = False  # 设置监控状态为False
         analysis_timer.stop()  # 停止分析定时器
         self_test_button.setEnabled(True)  # 新增：恢复自检按钮
-        is_monitoring = False
+
 button.clicked.connect(on_button_clicked)#连接信号和状态栏
 
 # 自检
@@ -623,6 +716,7 @@ def start_self_test():
     # 如果常规监控正在运行，先停止它
     if is_monitoring:
         on_button_clicked()   # 模拟点击“停止监控”，会自动插入分隔行
+    analysis_timer.stop()
 
     # 清空数据缓存，确保分析的是自检期间的60秒数据
     for key in data_cache:
