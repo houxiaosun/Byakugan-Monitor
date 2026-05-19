@@ -1,1 +1,6 @@
 .idea/
+.venv/
+apikey.txt/
+hardware_log.csv/
+diagnosis_log.txt/
+fps_log.csv/

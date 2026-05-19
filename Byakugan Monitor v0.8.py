@@ -26,7 +26,7 @@ class FPSOverlay(QWidget):
         )
         # 设置背景透明
         self.setAttribute(Qt.WA_TranslucentBackground)
-        # 创建显示 FPS 的标签
+        # 创建显示 FPS 的标签！新增记得修改！！！！！！！！！！！
         self.fps_label = QLabel("FPS: --")
         self.fps_label.setStyleSheet("""
             QLabel {
@@ -239,7 +239,7 @@ game_mode_button.move(500, 570)
 # 创建一个标签页控件
 tab_widget = QTabWidget(parent=window)
 tab_widget.setGeometry(20, 20, 760, 550)
-
+#！新增记得修改！！！！！！！！！！！
 # 创建实时监控标签页
 realtime_tab = QMainWindow()
 tab_widget.addTab(realtime_tab, "实时监控")
