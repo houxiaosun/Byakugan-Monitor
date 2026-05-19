@@ -1,7 +1,7 @@
 import requests
 
 # ===== 配置区域 =====
-API_KEY = "sk-ydjjcwvtmbifpanyvlexcbhbivexxzuvunlwmnnliptibzkh"
+API_KEY = ""
 BASE_URL = "https://api.siliconflow.cn/v1/chat/completions"
 MODEL = "Qwen/Qwen2.5-7B-Instruct"
 

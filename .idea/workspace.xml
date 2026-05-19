@@ -5,9 +5,10 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="dc44349f-e421-4392-a0fd-fd352a3bb703" name="更改" comment="">
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/.name" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.name" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Byakugan Monitor v0.8.py" beforeDir="false" afterPath="$PROJECT_DIR$/Byakugan Monitor v0.8.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ceshi.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/test api.py" beforeDir="false" afterPath="$PROJECT_DIR$/test api.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -35,26 +36,26 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "ModuleVcsDetector.initialDetectionPerformed": "true",
-    "Python 测试.Doctests (types 内).executor": "Debug",
-    "Python.Byakugan Monitor 0.8.executor": "Debug",
-    "Python.Byakugan Monitor v0.6.executor": "Run",
-    "Python.Byakugan Monitor v0.7.executor": "Debug",
-    "Python.Byakugan Monitor v0.8.executor": "Debug",
-    "Python._pydev_execfile.executor": "Debug",
-    "Python.ceshi.executor": "Run",
-    "Python.muqinjiekuaile v0.1.executor": "Debug",
-    "Python.test api.executor": "Run",
-    "Python.斐波那契烤机CPU.executor": "Run",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "git-widget-placeholder": "main",
-    "last_opened_file_path": "C:/Users/dongp/Downloads"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;Python 测试.Doctests (types 内).executor&quot;: &quot;Debug&quot;,
+    &quot;Python.Byakugan Monitor 0.8.executor&quot;: &quot;Debug&quot;,
+    &quot;Python.Byakugan Monitor v0.6.executor&quot;: &quot;Run&quot;,
+    &quot;Python.Byakugan Monitor v0.7.executor&quot;: &quot;Debug&quot;,
+    &quot;Python.Byakugan Monitor v0.8.executor&quot;: &quot;Debug&quot;,
+    &quot;Python._pydev_execfile.executor&quot;: &quot;Debug&quot;,
+    &quot;Python.ceshi.executor&quot;: &quot;Run&quot;,
+    &quot;Python.muqinjiekuaile v0.1.executor&quot;: &quot;Debug&quot;,
+    &quot;Python.test api.executor&quot;: &quot;Run&quot;,
+    &quot;Python.斐波那契烤机CPU.executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/Users/dongp/Downloads&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="C:\Users\dongp\Downloads" />
