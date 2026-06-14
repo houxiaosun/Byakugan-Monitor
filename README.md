@@ -1,29 +1,61 @@
-「白眼」硬件监视器 - 一个高中生开发的开源、免费、无广告的全能硬件监控工具。
+「白眼」硬件监视器 - 一个高中生开发的开源、免费、无广告的*亲民硬件监控工具*。
 
-像日向一族的瞳术一样，洞察您计算机的一切状态。
+像日向一族的瞳术一样，洞察您计算机的一切状态。将各式各样的*数据*“翻译”成所有人都能看懂的*文字*。
 
 "Byakugan" Hardware Monitor - An open-source, free, ad-free all-in-one hardware monitoring tool developed by a high school student.
 
-See all states of your computer, just like the Hyuga clan's legendary eye technique.
+See all states of your computer, just like the Hyuga clan's legendary eye technique.Turn all sorts of data into plain language that anyone can read.
 
 # Byakugan Monitor (白眼监视器)
 
 ![License](https://img.shields.io/badge/License-MIT-green.svg)
 ![Python](https://img.shields.io/badge/Python-3.x-blue.svg)
 
-> **像白眼一样，洞察硬件的一切。**
+> **无需比肩AIDA64，只用像白眼一样，洞察硬件的一切，翻译所有数据，让所有人都能看懂。**
 
-一个由高中生发起的开源项目，旨在构建一个真正**免费、无广告、功能全面**的硬件监控工具，终结付费软件和信息割裂的现状。
+一个由高中生发起的开源项目，旨在构建一个真正**亲民、免费、无广告、功能全面**的硬件监控工具，终结付费软件和信息割裂的现状。
 
-## ✨ 项目愿景
+##  项目愿景
 
+- [ ] **亲民（让所有人都能看懂）** (Approachable)
 - [ ] **完全免费开源** (Free & Open Source)
 - [ ] **毫无广告捆绑** (No Ads)  
 - [ ] **全面硬件信息** (CPU, GPU, Memory, Disk, Network, Sensors...)
 - [ ] **优雅直观的界面** (Beautiful UI)
 - [ ] **跨平台支持** (Windows, Linux, macOS)
 
-## 🚀 当前进度
+##  当前状态
+
+- **目前已实现：**
+
+· 基础硬件监控（CPU/GPU/内存/磁盘）
+· 实时数据展示
+· 简易的历史数据记录与查询
+· 浮窗FPS显示（需配合PresentMon）
+· 基础版AI分析接入（实验性）
+
+- **已知问题/待优化：**
+
+· UI适配：目前窗口缩放后布局会错乱，建议在100%缩放比例下使用。v1.0版本将重构前端。
+· CPU温度获取：部分环境下读取不稳定，正在寻找更通用的解决方案。
+· 显卡适配：当前仅支持NVIDIA显卡，AMD/Intel集显暂未适配，后续版本计划加入。
+· AI分析：目前仅为规则+API调用的初步实现，分析深度和准确率有待提升。
+
+
+目前项目处于早期开发阶段，但欢迎体验已实现的功能：
+
+1.  克隆本仓库: `git clone https://github.com/houxiaosun/Byakugan-Monitor.git`
+2.  运行程序: `python src/main.py`
+
+*注：功能正在快速迭代中，接口可能发生变化。*
+
+## 如何运行
+1.安装python环境（推荐3.11）
+2.安装python第三方库（pyside6，psutil，GPUtil，pywin32，HardwareMonitor，requests）
+3.若需使用FPS浮窗功能请安装外部程序“PresentMon-2.4.1-x64”
+
+
+## 更新日志
 
 ### v0.9 - 2026-05-19
 - **新增**: AI 智能分析功能，直接分析一分钟平均数据，生成诊断。
@@ -64,7 +96,7 @@ See all states of your computer, just like the Hyuga clan's legendary eye techni
 -**重构**：统一数据更新逻辑，采用总调度函数管理
 
 ### v0.2 - 2026-04-06
--**更新**：导入PYSide6模块，用计时器管理；采用QTimer计时器，不会卡住界面
+-**更新**：导入PYSide6模块，用于UI；采用QTimer计时器，不会卡住界面
 -**特点**：图形化显示，操做便捷，可打包
 
 ### v0.1 - 2026-04-06
@@ -73,29 +105,40 @@ See all states of your computer, just like the Hyuga clan's legendary eye techni
 
 **项目刚刚启动！目前正在规划与开发中。**
 
-- **下一步计划**：实现内存数据等多数据获取显示。
+
+## 下个版本计划
+### v0.9+
+- **优化代码结构**
+- **完善Ai分析提示词逻辑**
+
+### v1.0
+- **重构UI，解决窗口缩放问题**
+- **完善CPU温度获取方案**
+- **加入“教学入口”模块（自己也能判断电脑状态）**
+- **尽可能拓展硬件兼容性**
+
 - **欢迎任何形式的建议与帮助！**
 
-## 🛠 如何开始
 
-目前项目处于早期开发阶段，但欢迎体验已实现的功能：
+## 技术栈 
+· Python + PySide6（GUI）
+· psutil / GPUtil / OpenHardwareMonitor（硬件数据）
+· 接入Qwen2.5-7B API（智能分析）
 
-1.  克隆本仓库: `git clone https://github.com/houxiaosun/Byakugan-Monitor.git`
-2.  安装依赖: `pip install -r requirements.txt`
-3.  运行程序: `python src/main.py`
 
-*注：功能正在快速迭代中，接口可能发生变化。*
-
-## 🤝 如何贡献
+##  如何贡献
 
 项目刚起步，欢迎任何形式的建议与帮助！包括但不限于：
 
--   🐛 提交Bug反馈
--   💡 提出新功能建议
--   📖 完善文档
--   🔧 提交代码补丁
+-   提交Bug反馈
+-   提出新功能建议
+-   完善文档
+-   提交代码补丁
 
-具体贡献指南将在后续完善。
+
+## 致谢
+感谢我的信息技术老师，班主任和家人的支持，我会继续努力的！
+
 
 ## 📄 许可证
 
